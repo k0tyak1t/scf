@@ -1,3 +1,9 @@
+// Нужно переписать весь код так, чтобы всегда оставаться в МО базисе
+// Для этого, где нужно использовать ортогональный базис, нужно применять преобразование
+// Расчет нужно поместить в отдельную функцию
+// Нужно разделить код на pre-diis и diis-stages.
+
+
 #include "rhf.h"
 #include "matrix.h"
 #include "mo.h"
@@ -12,11 +18,8 @@ RHF::RHF(standard_matrices& std_m, MOs& mo)
     , diis_size(5)
     , iter(0)
     , is_converged(false)
-    , diis_mode(false)
     , std_m(std_m)
     , mo(mo)
-    , prev_energy(1)
-    , cur_energy(0)
     , diis_coefs(diis_size, (double) 1 / diis_size)
 {
     evec = new double[std_m.get_nAO() * std_m.get_nAO()];
@@ -57,7 +60,7 @@ void RHF::validate_convergency()
     }
 }
 
-void RHF::calculate_density() // the basis of ERI matrix depends of the basis of C
+void RHF::calculate_density()
 {
     for (int i = 0; i < std_m.get_nAO(); ++i) {
         for (int j = 0; j < std_m.get_nAO(); ++j) {
@@ -83,13 +86,12 @@ void RHF::calculate_eri_matrix() // in MO basis
     }
 }
 
-void RHF::calculate_fock_transformed()
+void RHF::calculate_fock()
 {
-    fock_matrix = std_m.H + eri_matrix; // in MO basis
-    fock_matrix = std_m.X * fock_matrix * std_m.X; // in MO' basis
+    fock_matrix = std_m.H + eri_matrix;
 }
 
-void RHF::recalculate_energy()
+void RHF::update_energy()
 {
     prev_energy = cur_energy;
     cur_energy = 0;
@@ -107,15 +109,20 @@ void RHF::recalculate_energy()
     }
 }
 
-void RHF::calculate_coef_matrix()
+void RHF::calc_exp_coefs()
 {
     mo.C.from_array(evec);
-    mo.C = std_m.X * mo.C.T();
+    mo.C = mo.C.T();
 }
 
-void RHF::verbose_iteration()
+void RHF::transform_exp_coefs()
 {
-    std::cout << "#"
+  mo.C = std_m.X * mo.C;
+}
+
+void RHF::print_iteration()
+{
+    std::cout << "#: "
               << std::setw(5) << iter << std::setw(20)
               << std::setprecision(12) << cur_energy + std_m.get_total_Vnn() << '\n';
 }
@@ -155,14 +162,14 @@ void RHF::roothan_hall()
 
         calculate_eri_matrix(); // C, D -> G
 
-        calculate_fock_transformed(); // h, G -> F'
+        calculate_fock_transformed(); // DEPRECATED BEHAVIOR!!!!!!!!
 
         direct_iteration();
 
         iter++;
-        verbose_iteration();
+        print_iteration();
         validate_convergency();
-        recalculate_energy();
+        update_energy();
         validate_diis_condition();
     }
 

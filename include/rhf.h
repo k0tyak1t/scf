@@ -11,15 +11,16 @@ public:
   RHF(standard_matrices&, MOs&);
 	~RHF();
 	bool get_convergency();
-  void validate_diis_condition(const int);
 	void validate_convergency(const int);
-  void calculate_density();
-  void calculate_eri_matrix();
-  void calculate_fock_transformed();
-  void calculate_fock(); // TODO: to be implemented!
-  double recalculate_energy();
-  void calculate_coef_matrix();
-  void verbose_iteration(const int);
+  void update_energy();
+  matrix transform_matrix(const matrix&); // todo
+  matrix transform_exp_coefs(); // todo 
+  void calc_density();
+  void transform_density();
+  void calc_eri_matrix();
+  void calc_fock();
+  void calc_exp_coefs();
+  void print_iteration(const int);
   void core_guess();
   void direct_iteration();
 	void roothan_hall();
@@ -27,7 +28,7 @@ public:
 private:
 	double etol;
 	int max_iter, diis_size;
-	bool is_converged, diis_mode;
+	bool is_converged;
 	standard_matrices& std_m;
 	MOs& mo;
   double E_old, E_new;
